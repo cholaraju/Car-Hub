@@ -3,10 +3,13 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Enable Corepack (which manages Yarn versions)
+RUN corepack enable
+
 # Copy package.json and yarn.lock to install dependencies
 COPY package.json yarn.lock ./
 
-# Install dependencies
+# Install dependencies with the correct Yarn version (from Corepack)
 RUN yarn install --frozen-lockfile
 
 # Copy all source files
