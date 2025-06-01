@@ -1,80 +1,47 @@
-# Stage 1: Build
-FROM node:18-alpine AS builder
+# Stage 1: dependencies install
+FROM node:18-alpine AS deps
 
 WORKDIR /app
 
-# Enable Corepack (which manages Yarn versions)
-RUN corepack enable# Stage 1: Build
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-
-# Enable Corepack to manage Yarn versions (optional but recommended)
+# Enable Corepack to manage Yarn version
 RUN corepack enable
 
-# Copy package files
-COPY package.json yarn.lock ./
+# Copy package files and .yarnrc.yml (to configure node_modules linker)
+COPY package.json yarn.lock .yarnrc.yml ./
 
-# Install dependencies, generating node_modules folder
+# Install dependencies with node_modules linker
 RUN yarn install --frozen-lockfile
 
-# Copy rest of the source code
+# Stage 2: build
+FROM node:18-alpine AS build
+
+WORKDIR /app
+
+RUN corepack enable
+
+# Copy all files
 COPY . .
+
+# Copy node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
 
 # Build Next.js app
 RUN yarn build
 
-# Stage 2: Production image
-FROM node:18-alpine AS runner
+# Stage 3: runner (production image)
+FROM node:18-alpine AS production
 
 WORKDIR /app
 
-# Enable Corepack
 RUN corepack enable
 
-# Copy necessary files from builder
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/yarn.lock ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
+# Copy necessary files from build stage
+COPY --from=build /app/package.json ./
+COPY --from=build /app/yarn.lock ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
 
-# Expose port 3000
 EXPOSE 3000
 
-# Start app in production
 CMD ["yarn", "start"]
-
-
-# Copy package.json and yarn.lock to install dependencies
-COPY package.json yarn.lock ./
-
-# Install dependencies with the correct Yarn version (from Corepack)
-RUN yarn install --frozen-lockfile
-
-# Copy all source files
-COPY . .
-
-# Build the Next.js app
-RUN yarn build
-
-# Stage 2: Production image
-FROM node:18-alpine AS runner
-
-WORKDIR /app
-
-# Copy only necessary files from the builder stage
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/yarn.lock ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-
-# Expose the port the app runs on
-EXPOSE 3000
-
-# Start the Next.js app in production mode
-CMD ["yarn", "start"]
-
-
-
