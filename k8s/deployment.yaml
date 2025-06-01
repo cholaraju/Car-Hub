@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextjs-app
+  template:
+    metadata:
+      labels:
+        app: nextjs-app
+    spec:
+      containers:
+        - name: nextjs-container
+          image: cholanetflixregistry.azurecr.io/nextjs-app:latest
+          ports:
+            - containerPort: 3000
+          # optional: add readinessProbe and livenessProbe for production readiness
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextjs-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: nextjs-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000

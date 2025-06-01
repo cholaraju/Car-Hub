@@ -44,4 +44,4 @@ jobs:
 
       - name: Deploy to AKS
         run: |
-          kubectl set image deployment/nextjs-deployment nextjs-container=${{ secrets.REGISTRY_NAME }}.azurecr.io/nextjs-app:latest
+          kubectl apply -f k8s/deployment.yaml
